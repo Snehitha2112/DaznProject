@@ -1,6 +1,5 @@
 package com.sample.daznproject.ui.main
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -19,18 +18,17 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sample.daznproject.R
+import com.sample.daznproject.data.model.VideoListModel
 import com.sample.daznproject.ui.player.PlayerActivity
 import com.sample.daznproject.ui.theme.DaznProjectTheme
 import com.sample.daznproject.viewmodel.MainViewModel
+import com.sample.daznproject.viewmodel.MainViewModelState
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -40,69 +38,41 @@ class MainActivity : ComponentActivity() {
         const val SELECTED_VIDEO_URL = "selected_video_url"
     }
 
-    private val mainViewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             DaznProjectTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
                 ) {
-                    VideoListView(this, mainViewModel)
-                }
-            }
-        }
-    }
-}
+                    val state = viewModel.videoListLiveData.observeAsState()
+                    viewModel.loadVideoList()
 
-@Composable
-fun VideoListView(context: Context, viewModel: MainViewModel) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = context.getString(R.string.text_video_list))
-
-        val videoListState = viewModel.getVideoListLiveData().observeAsState()
-        LaunchedEffect(Unit) {
-            viewModel.loadVideoList(context)
-        }
-
-        when (val videoList = videoListState.value) {
-            null -> Text(text = "Loading Video List...")
-            else -> {
-                LazyColumn {
-                    itemsIndexed(videoList) { position, video ->
-                        Text(
-                            text = video.name ?: "Video::${position + 1}",
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (video.videoUri?.isNotEmpty() == true) {
-                                        val intent = Intent(context, PlayerActivity::class.java)
-                                        intent.putExtra(
-                                            MainActivity.SELECTED_VIDEO_URL,
-                                            video.videoUri
-                                        )
-                                        context.startActivity(intent)
-                                    } else {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                context.getString(R.string.text_video_not_exists),
-                                                Toast.LENGTH_SHORT
-                                            )
-                                            .show()
-                                    }
-                                }
-                        )
-
-                        if (position < videoList.size - 1) {
-                            Divider(color = Color.Gray, thickness = 1.dp, startIndent = 8.dp)
+                    when (val result = state.value) {
+                        is MainViewModelState.Videos -> VideoListView(
+                            title = getString(R.string.text_video_list), videos = result.list
+                        ) { video ->
+                            if (video.videoUri?.isNotEmpty() == true) {
+                                val intent = Intent(this, PlayerActivity::class.java)
+                                intent.putExtra(
+                                    SELECTED_VIDEO_URL, video.videoUri
+                                )
+                                startActivity(intent)
+                            } else {
+                                Toast.makeText(
+                                    this,
+                                    getString(R.string.text_video_not_exists),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
+
+                        MainViewModelState.Error -> Error()
+                        MainViewModelState.Loading -> Loading()
+                        else -> {}
                     }
                 }
             }
@@ -110,10 +80,35 @@ fun VideoListView(context: Context, viewModel: MainViewModel) {
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    DaznProjectTheme {
-        VideoListView(LocalContext.current, MainViewModel())
+fun VideoListView(title: String, videos: List<VideoListModel>, click: (VideoListModel) -> Unit) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(text = title)
+        LazyColumn {
+            itemsIndexed(videos) { position, video ->
+                Text(text = video.name ?: "Video::${position + 1}",
+                    fontSize = 16.sp,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth()
+                        .clickable {
+                            click(video)
+                        })
+
+                if (position < videos.size - 1) {
+                    Divider(color = Color.Gray, thickness = 1.dp, startIndent = 8.dp)
+                }
+            }
+        }
     }
+}
+
+@Composable
+fun Loading() {
+    Text(text = "Loading")
+}
+
+@Composable
+fun Error() {
+    Text(text = "Error")
 }

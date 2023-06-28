@@ -1,36 +1,49 @@
 package com.sample.daznproject.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sample.daznproject.data.model.VideoListModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.launch
 import java.io.IOException
-import java.io.InputStream
 import javax.inject.Inject
 
+@SuppressLint("StaticFieldLeak")
 @HiltViewModel
-class MainViewModel @Inject constructor() : ViewModel() {
-    private var videoListLiveData = MutableLiveData<List<VideoListModel>?>()
-    suspend fun loadVideoList(context: Context) {
-        return withContext(Dispatchers.IO) {
+class MainViewModel @Inject constructor(
+    @ApplicationContext private val application: Context
+) : ViewModel() {
+
+    private var _videoListLiveData = MutableLiveData<MainViewModelState>()
+    val videoListLiveData: LiveData<MainViewModelState> = _videoListLiveData
+
+    fun loadVideoList() {
+        _videoListLiveData.value = MainViewModelState.Loading
+        viewModelScope.launch {
             try {
-                val inputStream: InputStream = context.assets.open("videolist.json")
-                val jsonString = inputStream.bufferedReader().use { it.readText() }
-                val gson = Gson()
-                val videoListType = object : TypeToken<List<VideoListModel>>() {}.type
-                val videosList: List<VideoListModel> = gson.fromJson(jsonString, videoListType)
-                videoListLiveData.postValue(videosList)
+                val videosList: List<VideoListModel> =
+                    Gson().fromJson(/* json = */ application.assets.open("videolist.json")
+                        .bufferedReader().use { it.readText() },/* typeOfT = */
+                        object : TypeToken<List<VideoListModel>>() {}.type
+                    )
+                _videoListLiveData.value = MainViewModelState.Videos(videosList)
             } catch (e: IOException) {
                 e.printStackTrace()
-                videoListLiveData.postValue(null)
+                _videoListLiveData.value = MainViewModelState.Error
             }
         }
     }
+}
 
-    fun getVideoListLiveData(): MutableLiveData<List<VideoListModel>?> = videoListLiveData
+sealed interface MainViewModelState {
+    class Videos(val list: List<VideoListModel>) : MainViewModelState
+    object Loading : MainViewModelState
+    object Error : MainViewModelState
 }

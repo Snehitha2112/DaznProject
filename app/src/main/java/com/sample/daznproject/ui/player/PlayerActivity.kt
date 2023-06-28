@@ -85,7 +85,6 @@ fun createExoPlayer(context: Context, uri: String): ExoPlayer {
                 )
                 val source = DashMediaSource.Factory(dataSourceFactory)
                     .createMediaSource(MediaItem.fromUri(uri))
-
                 setMediaSource(source)
                 prepare()
             }
