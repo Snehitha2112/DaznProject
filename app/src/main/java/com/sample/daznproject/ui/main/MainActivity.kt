@@ -19,24 +19,19 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.sample.daznproject.R
-import com.sample.daznproject.data.model.VideoListModel
 import com.sample.daznproject.ui.player.PlayerActivity
 import com.sample.daznproject.ui.theme.DaznProjectTheme
 import com.sample.daznproject.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.InputStream
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -57,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    VideoListView(this)
+                    VideoListView(this, mainViewModel)
                 }
             }
         }
@@ -65,12 +60,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun VideoListView(context: Context) {
+fun VideoListView(context: Context, viewModel: MainViewModel) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = context.getString(R.string.text_video_list))
-        val videoListState = produceState<List<VideoListModel>?>(null) {
-            value = loadVideoList(context)
+
+        val videoListState = viewModel.getVideoListLiveData().observeAsState()
+        LaunchedEffect(Unit) {
+            viewModel.loadVideoList(context)
         }
+
         when (val videoList = videoListState.value) {
             null -> Text(text = "Loading Video List...")
             else -> {
@@ -116,18 +114,6 @@ fun VideoListView(context: Context) {
 @Composable
 fun DefaultPreview() {
     DaznProjectTheme {
-        VideoListView(LocalContext.current)
-    }
-}
-
-suspend fun loadVideoList(context: Context?): List<VideoListModel>? {
-    return withContext(Dispatchers.IO) {
-        context?.let { thisContext ->
-            val inputsStream: InputStream = thisContext.assets.open("videolist.json")
-            val jsonString = inputsStream.bufferedReader().use { it.readText() }
-            val gson = Gson()
-            val videoListType = object : TypeToken<List<VideoListModel>>() {}.type
-            gson.fromJson(jsonString, videoListType)
-        }
+        VideoListView(LocalContext.current, MainViewModel())
     }
 }
