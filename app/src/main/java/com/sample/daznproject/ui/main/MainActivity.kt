@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,15 +32,20 @@ import com.sample.daznproject.R
 import com.sample.daznproject.data.model.VideoListModel
 import com.sample.daznproject.ui.player.PlayerActivity
 import com.sample.daznproject.ui.theme.DaznProjectTheme
+import com.sample.daznproject.viewmodel.MainViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     companion object {
         const val SELECTED_VIDEO_URL = "selected_video_url"
     }
+
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
