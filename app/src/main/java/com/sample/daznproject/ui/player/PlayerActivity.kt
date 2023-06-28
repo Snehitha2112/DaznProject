@@ -16,12 +16,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.ui.PlayerView
 import com.sample.daznproject.ui.main.MainActivity
 import com.sample.daznproject.ui.theme.DaznProjectTheme
@@ -76,36 +75,21 @@ fun createPlayerView(context: Context): PlayerView {
 @Composable
 fun createExoPlayer(context: Context, uri: String): ExoPlayer {
     return remember {
-        ExoPlayer.Builder(context/*, DefaultRenderersFactory(context)*/)
+        ExoPlayer.Builder(context)
             .build()
             .apply {
-                /*val userAgent = Util.getUserAgent(context, context.packageName)
-                val dataSourceFactory = DefaultHttpDataSource.Factory()
-                dataSourceFactory.setUserAgent(userAgent)
-                val dashMediaSource = DashMediaSource.Factory(
-                    DefaultDashChunkSource.Factory(dataSourceFactory),
-                    dataSourceFactory
-                )
-                    .createMediaSource(createMediaItem(uri))*/
                 val defaultDataSourceFactory = DefaultDataSource.Factory(context)
                 val dataSourceFactory: DataSource.Factory = DefaultDataSource.Factory(
                     context,
                     defaultDataSourceFactory
                 )
-                val source = ProgressiveMediaSource.Factory(dataSourceFactory)
+                val source = DashMediaSource.Factory(dataSourceFactory)
                     .createMediaSource(MediaItem.fromUri(uri))
 
                 setMediaSource(source)
                 prepare()
             }
     }
-}
-
-private fun createMediaItem(uri: String): MediaItem {
-    return MediaItem.Builder()
-        .setUri(uri)
-        .setMimeType(MimeTypes.APPLICATION_MPD)
-        .build()
 }
 
 @Preview(showBackground = true)

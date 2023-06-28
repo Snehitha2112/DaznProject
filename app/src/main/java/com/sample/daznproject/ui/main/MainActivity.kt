@@ -38,7 +38,7 @@ import java.io.InputStream
 class MainActivity : ComponentActivity() {
 
     companion object {
-        const val SELECTED_VIDEO_URL = "videoUrl"
+        const val SELECTED_VIDEO_URL = "selected_video_url"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,13 +79,16 @@ fun VideoListView(context: Context) {
                                 .clickable {
                                     if (video.videoUri?.isNotEmpty() == true) {
                                         val intent = Intent(context, PlayerActivity::class.java)
-                                        intent.putExtra(MainActivity.SELECTED_VIDEO_URL, video.videoUri)
+                                        intent.putExtra(
+                                            MainActivity.SELECTED_VIDEO_URL,
+                                            video.videoUri
+                                        )
                                         context.startActivity(intent)
                                     } else {
                                         Toast
                                             .makeText(
                                                 context,
-                                                "Video Not Available",
+                                                context.getString(R.string.text_video_not_exists),
                                                 Toast.LENGTH_SHORT
                                             )
                                             .show()
