@@ -12,6 +12,8 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -35,8 +37,12 @@ import com.sample.daznproject.ui.theme.DaznProjectTheme
 class PlayerActivity : ComponentActivity() {
 
     private var pauseCount = 0
+    private val pauseCountText = mutableStateOf("Pause Count :: 0")
     private var forwardCount = 0
+    private val forwardCountText = mutableStateOf("Forward Count :: 0")
     private var backwardCount = 0
+    private val backwardCountText = mutableStateOf("Backward Count :: 0")
+    private var isForwardOrBackward = false
     private lateinit var analytics: FirebaseAnalytics
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,45 +69,6 @@ class PlayerActivity : ComponentActivity() {
                             lifeCycleOwner.lifecycle.removeObserver(observer)
                         }
                     }
-
-                    val playerListener = object : Player.Listener {
-                        override fun onPositionDiscontinuity(
-                            oldPosition: Player.PositionInfo,
-                            newPosition: Player.PositionInfo,
-                            reason: Int
-                        ) {
-                            when (reason) {
-                                Player.DISCONTINUITY_REASON_SEEK -> {
-                                    if (oldPosition.positionMs < newPosition.positionMs) {
-                                        forwardCount++
-                                        analytics.logEvent(Constants.FORWARD, null)
-                                    } else {
-                                        backwardCount++
-                                        analytics.logEvent(Constants.BACKWARD, null)
-                                    }
-                                }
-                                else -> Unit
-                            }
-                        }
-
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            super.onIsPlayingChanged(isPlaying)
-                            if (isPlaying) {
-                                analytics.logEvent(Constants.PLAYING, null)
-                            } else {
-                                pauseCount++
-                                analytics.logEvent(Constants.PAUSE, null)
-                            }
-                        }
-
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            super.onPlaybackStateChanged(playbackState)
-                            analytics.logEvent(Constants.PLAY_STATE_CHANGED) {
-                                param(Constants.PLAY_STATE, playbackState.toString())
-                            }
-                        }
-                    }
-
                     Column(
                         modifier = Modifier
                             .padding(padding)
@@ -142,24 +109,44 @@ class PlayerActivity : ComponentActivity() {
                             }
                         }
 
-                        Text(
-                            text = "Pause Count :: $pauseCount",
-                            modifier = Modifier.padding(15.dp)
-                        )
-                        Text(
-                            text = "Forward Count :: $pauseCount",
-                            modifier = Modifier.padding(horizontal = 15.dp)
-                        )
+                        PauseCountTextView()
+                        ForwardCountTextView()
                         Spacer(modifier = Modifier.size(15.dp))
-                        Text(
-                            text = "Backward Count :: $pauseCount",
-                            modifier = Modifier.padding(horizontal = 15.dp)
-                        )
-
+                        BackwardCountTextView()
                     }
                 }
             }
         }
+    }
+
+    @Composable
+    fun PauseCountTextView() {
+        val finalPauseCountText by pauseCountText
+        Text(
+            text = finalPauseCountText,
+            modifier = Modifier.padding(15.dp),
+            style = TextStyle(fontWeight = FontWeight.Bold)
+        )
+    }
+
+    @Composable
+    fun ForwardCountTextView() {
+        val finalForwardCountText by forwardCountText
+        Text(
+            text = finalForwardCountText,
+            modifier = Modifier.padding(horizontal = 15.dp),
+            style = TextStyle(fontWeight = FontWeight.Bold)
+        )
+    }
+
+    @Composable
+    fun BackwardCountTextView() {
+        val finalBackwardCountText by backwardCountText
+        Text(
+            text = finalBackwardCountText,
+            modifier = Modifier.padding(horizontal = 15.dp),
+            style = TextStyle(fontWeight = FontWeight.Bold)
+        )
     }
 
     private fun buildExoPlayer(context: Context, uri: String): ExoPlayer {
@@ -179,4 +166,51 @@ class PlayerActivity : ComponentActivity() {
                 prepare()
             }
     }
+
+    private val playerListener = object : Player.Listener {
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            when (reason) {
+                Player.DISCONTINUITY_REASON_SEEK -> {
+                    if (oldPosition.positionMs < newPosition.positionMs) {
+                        isForwardOrBackward = true
+                        forwardCount++
+                        forwardCountText.value = "Forward Count :: $forwardCount"
+                        analytics.logEvent(Constants.FORWARD, null)
+                    } else {
+                        isForwardOrBackward = true
+                        backwardCount++
+                        backwardCountText.value = "Backward Count :: $backwardCount"
+                        analytics.logEvent(Constants.BACKWARD, null)
+                    }
+                }
+                else -> Unit
+            }
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            super.onIsPlayingChanged(isPlaying)
+            if (isPlaying) {
+                analytics.logEvent(Constants.PLAYING, null)
+            } else {
+                if (!isForwardOrBackward) {
+                    pauseCount++
+                    pauseCountText.value = "Pause Count :: $pauseCount"
+                    analytics.logEvent(Constants.PAUSE, null)
+                }
+                isForwardOrBackward = false
+            }
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            super.onPlaybackStateChanged(playbackState)
+            analytics.logEvent(Constants.PLAY_STATE_CHANGED) {
+                param(Constants.PLAY_STATE, playbackState.toString())
+            }
+        }
+    }
 }
+
