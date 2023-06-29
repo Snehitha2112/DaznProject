@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "842803621577",
+    "project_id": "daznproject",
+    "storage_bucket": "daznproject.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842803621577:android:a31c5a38b76840342ce718",
+        "android_client_info": {
+          "package_name": "com.sample.daznproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "842803621577-sjrk4n71257ldh8r5e26pl9i43p78rcp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxYU00TWAVUfxYtQqdN9ULvHdp8LVYUEE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "842803621577-sjrk4n71257ldh8r5e26pl9i43p78rcp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

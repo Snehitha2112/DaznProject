@@ -18,11 +18,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.ui.PlayerView
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.analytics.ktx.logEvent
+import com.google.firebase.ktx.Firebase
+import com.sample.daznproject.Constants
 import com.sample.daznproject.ui.main.MainActivity
 import com.sample.daznproject.ui.theme.DaznProjectTheme
 
@@ -31,9 +37,11 @@ class PlayerActivity : ComponentActivity() {
     private var pauseCount = 0
     private var forwardCount = 0
     private var backwardCount = 0
+    private lateinit var analytics: FirebaseAnalytics
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        analytics = Firebase.analytics
         setContent {
             DaznProjectTheme {
                 Surface(
@@ -56,6 +64,44 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
 
+                    val playerListener = object : Player.Listener {
+                        override fun onPositionDiscontinuity(
+                            oldPosition: Player.PositionInfo,
+                            newPosition: Player.PositionInfo,
+                            reason: Int
+                        ) {
+                            when (reason) {
+                                Player.DISCONTINUITY_REASON_SEEK -> {
+                                    if (oldPosition.positionMs < newPosition.positionMs) {
+                                        forwardCount++
+                                        analytics.logEvent(Constants.FORWARD, null)
+                                    } else {
+                                        backwardCount++
+                                        analytics.logEvent(Constants.BACKWARD, null)
+                                    }
+                                }
+                                else -> Unit
+                            }
+                        }
+
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            super.onIsPlayingChanged(isPlaying)
+                            if (isPlaying) {
+                                analytics.logEvent(Constants.PLAYING, null)
+                            } else {
+                                pauseCount++
+                                analytics.logEvent(Constants.PAUSE, null)
+                            }
+                        }
+
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            super.onPlaybackStateChanged(playbackState)
+                            analytics.logEvent(Constants.PLAY_STATE_CHANGED) {
+                                param(Constants.PLAY_STATE, playbackState.toString())
+                            }
+                        }
+                    }
+
                     Column(
                         modifier = Modifier
                             .padding(padding)
@@ -70,7 +116,7 @@ class PlayerActivity : ComponentActivity() {
                                 exoPlayer.playWhenReady = true
                                 exoPlayer.videoScalingMode =
                                     C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-
+                                exoPlayer.addListener(playerListener)
                                 AndroidView(
                                     factory = { context ->
                                         PlayerView(context).also {
